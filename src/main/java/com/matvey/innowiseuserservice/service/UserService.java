@@ -7,6 +7,9 @@ import com.matvey.innowiseuserservice.mapper.UserMapper;
 import com.matvey.innowiseuserservice.repository.UserRepository;
 import com.matvey.innowiseuserservice.specification.UserSpecification;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -30,12 +33,14 @@ public class UserService {
         return userMapper.toDto(savedUser);
     }
 
+    @Cacheable(value = "users", key = "#id")
     public UserDto getById(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
         return userMapper.toDto(user);
     }
 
+    @Cacheable(value = "users")
     public Page<UserDto> getAll(String name, String surname, Pageable pageable) {
         Specification<User> spec = Specification.where((root, query, cb) -> cb.conjunction());
 
@@ -48,6 +53,7 @@ public class UserService {
     }
 
     @Transactional
+    @CachePut(value = "users", key = "#id")
     public UserDto update(UUID id, UserDto userDto) {
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
@@ -57,16 +63,19 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = "users", key = "#id")
     public void activate(UUID id) {
         userRepository.updateActiveStatus(id, true);
     }
 
     @Transactional
+    @CacheEvict(value = "users", key = "#id")
     public void deactivate(UUID id) {
         userRepository.updateActiveStatus(id, false);
     }
 
     @Transactional
+    @CacheEvict(value = "users", key = "#id")
     public void delete(UUID id) {
         userRepository.deleteById(id);
     }

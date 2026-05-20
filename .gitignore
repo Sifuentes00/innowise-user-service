@@ -1,0 +1,56 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+
+### IntelliJ IDEA ###
+.idea/
+.vscode/
+.settings/
+.classpath
+*.swp
+.idea
+*.iws
+*.iml
+*.ipr
+*.jar
+*.war
+*.zip
+*.tar.gz
+
+### OS Specific ###
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+### Logs ###
+*.log
+logs/
+
+### Environment & Config ###
+.env
+.env.local
+.env.*.local
+
+### Database ###
+*.db
+*.sqlite
+*.sqlite3
+*.sql.gz
+*.dump
+
+### Temporary Files ###
+*.tmp
+*.temp
+*.swo
+*~
+.bak
+*.backup
+
+

@@ -2,6 +2,7 @@ package com.matvey.innowiseuserservice.service;
 
 import com.matvey.innowiseuserservice.dto.UserDto;
 import com.matvey.innowiseuserservice.entity.User;
+import com.matvey.innowiseuserservice.exception.NotFoundException;
 import com.matvey.innowiseuserservice.mapper.UserMapper;
 import com.matvey.innowiseuserservice.repository.UserRepository;
 import com.matvey.innowiseuserservice.specification.UserSpecification;
@@ -31,7 +32,7 @@ public class UserService {
 
     public UserDto getById(UUID id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
         return userMapper.toDto(user);
     }
 
@@ -49,7 +50,7 @@ public class UserService {
     @Transactional
     public UserDto update(UUID id, UserDto userDto) {
         User existingUser = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
         userMapper.updateEntityFromDto(userDto, existingUser);
         User updatedUser = userRepository.save(existingUser);
         return userMapper.toDto(updatedUser);

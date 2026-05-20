@@ -3,6 +3,8 @@ package com.matvey.innowiseuserservice.service;
 import com.matvey.innowiseuserservice.dto.PaymentCardDto;
 import com.matvey.innowiseuserservice.entity.PaymentCard;
 import com.matvey.innowiseuserservice.entity.User;
+import com.matvey.innowiseuserservice.exception.BadRequestException;
+import com.matvey.innowiseuserservice.exception.NotFoundException;
 import com.matvey.innowiseuserservice.mapper.PaymentCardMapper;
 import com.matvey.innowiseuserservice.repository.PaymentCardRepository;
 import com.matvey.innowiseuserservice.repository.UserRepository;
@@ -32,11 +34,11 @@ public class PaymentCardService {
 
     public PaymentCardDto create(PaymentCardDto paymentCardDto) {
         User user = userRepository.findById(paymentCardDto.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + paymentCardDto.getUserId()));
+                .orElseThrow(() -> new NotFoundException("User not found with id: " + paymentCardDto.getUserId()));
 
         List<PaymentCard> existingCards = paymentCardRepository.findByUserId(user.getId());
         if (existingCards.size() >= 5) {
-            throw new RuntimeException("User cannot have more than 5 payment cards");
+            throw new BadRequestException("User cannot have more than 5 payment cards");
         }
 
         PaymentCard paymentCard = paymentCardMapper.toEntity(paymentCardDto);
@@ -47,7 +49,7 @@ public class PaymentCardService {
 
     public PaymentCardDto getById(UUID id) {
         PaymentCard paymentCard = paymentCardRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payment card not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("Payment card not found with id: " + id));
         return paymentCardMapper.toDto(paymentCard);
     }
 
@@ -70,7 +72,7 @@ public class PaymentCardService {
     @Transactional
     public PaymentCardDto update(UUID id, PaymentCardDto paymentCardDto) {
         PaymentCard existingCard = paymentCardRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payment card not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("Payment card not found with id: " + id));
         paymentCardMapper.updateEntityFromDto(paymentCardDto, existingCard);
         PaymentCard updatedCard = paymentCardRepository.save(existingCard);
         return paymentCardMapper.toDto(updatedCard);

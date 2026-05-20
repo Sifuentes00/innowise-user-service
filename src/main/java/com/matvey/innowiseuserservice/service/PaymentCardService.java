@@ -10,6 +10,7 @@ import com.matvey.innowiseuserservice.repository.PaymentCardRepository;
 import com.matvey.innowiseuserservice.repository.UserRepository;
 import com.matvey.innowiseuserservice.specification.PaymentCardSpecification;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -32,6 +33,7 @@ public class PaymentCardService {
     @Autowired
     private PaymentCardMapper paymentCardMapper;
 
+    @CacheEvict(value = "users", key = "#paymentCardDto.userId")
     public PaymentCardDto create(PaymentCardDto paymentCardDto) {
         User user = userRepository.findById(paymentCardDto.getUserId())
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + paymentCardDto.getUserId()));
@@ -70,6 +72,7 @@ public class PaymentCardService {
     }
 
     @Transactional
+    @CacheEvict(value = "users")
     public PaymentCardDto update(UUID id, PaymentCardDto paymentCardDto) {
         PaymentCard existingCard = paymentCardRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Payment card not found with id: " + id));
@@ -89,6 +92,7 @@ public class PaymentCardService {
     }
 
     @Transactional
+    @CacheEvict(value = "users")
     public void delete(UUID id) {
         paymentCardRepository.deleteById(id);
     }

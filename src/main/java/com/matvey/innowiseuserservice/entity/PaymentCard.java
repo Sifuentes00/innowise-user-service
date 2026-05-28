@@ -29,6 +29,9 @@ public class PaymentCard {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Column(name = "user_id", nullable = false, insertable = false, updatable = false)
+    private UUID userId;
+
     @Column(name = "number", nullable = false)
     private String number;
 

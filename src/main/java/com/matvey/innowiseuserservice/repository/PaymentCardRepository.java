@@ -19,10 +19,10 @@ public interface PaymentCardRepository extends JpaRepository<PaymentCard, UUID>,
 
     Optional<PaymentCard> findByNumber(String number);
 
-    @Query("SELECT p FROM PaymentCard p WHERE p.user.id = :userId")
+    @Query("SELECT pc FROM PaymentCard pc WHERE pc.user.id = :userId")
     List<PaymentCard> findByUserId(@Param("userId") UUID userId);
 
-    @Query("SELECT p FROM PaymentCard p WHERE p.user.id = :userId")
+    @Query("SELECT pc FROM PaymentCard pc WHERE pc.user.id = :userId")
     Page<PaymentCard> findByUserId(@Param("userId") UUID userId, Pageable pageable);
 
     @Modifying

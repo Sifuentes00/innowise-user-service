@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -22,18 +23,28 @@ public class UserController {
     private UserService userService;
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserDto> createUser(@Valid @RequestBody UserDto userDto) {
         UserDto createdUser = userService.create(userDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<UserDto> getUserById(@PathVariable UUID id) {
-        UserDto userDto = userService.getById(id);
+    @GetMapping("/profile")
+    public ResponseEntity<UserDto> getMyProfile() {
+        UUID currentUserId = com.matvey.innowiseuserservice.util.SecurityUtils.getCurrentUserId();
+        UserDto userDto = userService.getByUserId(currentUserId);
+        return ResponseEntity.ok(userDto);
+    }
+
+    @GetMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
+    public ResponseEntity<UserDto> getUserById(@PathVariable UUID userId) {
+        UserDto userDto = userService.getByUserId(userId);
         return ResponseEntity.ok(userDto);
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<UserDto>> getAllUsers(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String surname,
@@ -45,27 +56,35 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<UserDto> updateUser(@PathVariable UUID id, @Valid @RequestBody UserDto userDto) {
-        UserDto updatedUser = userService.update(id, userDto);
+    @PutMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
+    public ResponseEntity<UserDto> updateUser(@PathVariable UUID userId, @Valid @RequestBody UserDto userDto) {
+        UserDto existingUser = userService.getByUserId(userId);
+        UserDto updatedUser = userService.update(existingUser.getId(), userDto);
         return ResponseEntity.ok(updatedUser);
     }
 
-    @PatchMapping("/{id}/activate")
-    public ResponseEntity<Void> activateUser(@PathVariable UUID id) {
-        userService.activate(id);
+    @PatchMapping("/{userId}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> activateUser(@PathVariable UUID userId) {
+        UserDto user = userService.getByUserId(userId);
+        userService.activate(user.getId());
         return ResponseEntity.ok().build();
     }
 
-    @PatchMapping("/{id}/deactivate")
-    public ResponseEntity<Void> deactivateUser(@PathVariable UUID id) {
-        userService.deactivate(id);
+    @PatchMapping("/{userId}/deactivate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deactivateUser(@PathVariable UUID userId) {
+        UserDto user = userService.getByUserId(userId);
+        userService.deactivate(user.getId());
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
-        userService.delete(id);
+    @DeleteMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
+    public ResponseEntity<Void> deleteUser(@PathVariable UUID userId) {
+        UserDto user = userService.getByUserId(userId);
+        userService.delete(user.getId());
         return ResponseEntity.noContent().build();
     }
 }

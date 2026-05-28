@@ -3,6 +3,8 @@ package com.matvey.innowiseuserservice.integration;
 import com.matvey.innowiseuserservice.dto.UserDto;
 import com.matvey.innowiseuserservice.entity.User;
 import com.matvey.innowiseuserservice.repository.UserRepository;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,6 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +27,11 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.time.LocalDate;
+import java.util.Date;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -55,6 +62,23 @@ class UserIntegrationTest {
         restTemplate = new RestTemplate(factory);
         baseUrl = "http://localhost:" + port;
         userRepository.deleteAll();
+    }
+
+    private String generateTestToken(UUID userId, String role) {
+        Key key = Keys.secretKeyFor(io.jsonwebtoken.SignatureAlgorithm.HS256);
+        return Jwts.builder()
+                .subject(userId.toString())
+                .claim("role", role)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + 3600000))
+                .signWith(key)
+                .compact();
+    }
+
+    private HttpHeaders createAuthHeaders(UUID userId, String role) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + generateTestToken(userId, role));
+        return headers;
     }
 
     @Test

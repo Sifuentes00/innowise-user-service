@@ -6,7 +6,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring", uses = UserMapper.class)
+@Mapper(componentModel = "spring")
 public interface PaymentCardMapper {
 
     PaymentCardDto toDto(PaymentCard paymentCard);
@@ -14,5 +14,6 @@ public interface PaymentCardMapper {
     @Mapping(target = "user", ignore = true)
     PaymentCard toEntity(PaymentCardDto paymentCardDto);
 
+    @Mapping(target = "user", ignore = true)
     void updateEntityFromDto(PaymentCardDto paymentCardDto, @MappingTarget PaymentCard paymentCard);
 }

@@ -1,5 +1,6 @@
 package com.matvey.innowiseuserservice.service;
 
+import com.matvey.innowiseuserservice.dto.UserCreateRequest;
 import com.matvey.innowiseuserservice.dto.UserDto;
 import com.matvey.innowiseuserservice.entity.User;
 import com.matvey.innowiseuserservice.exception.NotFoundException;
@@ -33,10 +34,29 @@ public class UserService {
         return userMapper.toDto(savedUser);
     }
 
+    public UserDto createUser(UserCreateRequest request) {
+        User user = new User();
+        user.setUserId(request.getUserId());
+        user.setName(request.getName());
+        user.setSurname(request.getSurname());
+        user.setBirthDate(request.getBirthDate());
+        user.setEmail(request.getEmail());
+        user.setActive(true);
+        User savedUser = userRepository.save(user);
+        return userMapper.toDto(savedUser);
+    }
+
     @Cacheable(value = "users", key = "#id")
     public UserDto getById(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
+        return userMapper.toDto(user);
+    }
+
+    @Cacheable(value = "users", key = "#userId")
+    public UserDto getByUserId(UUID userId) {
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new NotFoundException("User not found with userId: " + userId));
         return userMapper.toDto(user);
     }
 

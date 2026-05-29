@@ -58,6 +58,7 @@ class PaymentCardServiceTest {
 
         user = new User();
         user.setId(userId);
+        user.setUserId(userId);
         user.setName("John");
         user.setSurname("Doe");
 
@@ -80,7 +81,7 @@ class PaymentCardServiceTest {
 
     @Test
     void testCreate_Success() {
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findByUserId(userId)).thenReturn(Optional.of(user));
         when(paymentCardRepository.findByUserId(userId)).thenReturn(new ArrayList<>());
         when(paymentCardMapper.toEntity(paymentCardDto)).thenReturn(paymentCard);
         when(paymentCardRepository.save(paymentCard)).thenReturn(paymentCard);
@@ -90,16 +91,16 @@ class PaymentCardServiceTest {
 
         assertNotNull(result);
         assertEquals(paymentCardDto.getNumber(), result.getNumber());
-        verify(userRepository, times(1)).findById(userId);
+        verify(userRepository, times(1)).findByUserId(userId);
         verify(paymentCardRepository, times(1)).save(paymentCard);
     }
 
     @Test
     void testCreate_UserNotFound() {
-        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+        when(userRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
         assertThrows(NotFoundException.class, () -> paymentCardService.create(paymentCardDto));
-        verify(userRepository, times(1)).findById(userId);
+        verify(userRepository, times(1)).findByUserId(userId);
         verify(paymentCardRepository, never()).save(any());
     }
 
@@ -110,11 +111,11 @@ class PaymentCardServiceTest {
             existingCards.add(new PaymentCard());
         }
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findByUserId(userId)).thenReturn(Optional.of(user));
         when(paymentCardRepository.findByUserId(userId)).thenReturn(existingCards);
 
         assertThrows(BadRequestException.class, () -> paymentCardService.create(paymentCardDto));
-        verify(userRepository, times(1)).findById(userId);
+        verify(userRepository, times(1)).findByUserId(userId);
         verify(paymentCardRepository, never()).save(any());
     }
 

@@ -16,6 +16,9 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
 
     Optional<User> findByEmail(String email);
 
+    @Query("SELECT u FROM User u WHERE u.userId = :userId")
+    Optional<User> findByUserId(@Param("userId") UUID userId);
+
     @Modifying
     @Query(value = "UPDATE users SET active = :active WHERE id = :id", nativeQuery = true)
     void updateActiveStatus(@Param("id") UUID id, @Param("active") Boolean active);

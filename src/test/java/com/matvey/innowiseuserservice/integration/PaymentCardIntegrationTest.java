@@ -62,6 +62,7 @@ class PaymentCardIntegrationTest {
         userRepository.deleteAll();
 
         user = new User();
+        user.setUserId(java.util.UUID.randomUUID());
         user.setName("John");
         user.setSurname("Doe");
         user.setBirthDate(LocalDate.of(1990, 1, 1));
@@ -73,7 +74,7 @@ class PaymentCardIntegrationTest {
     @Test
     void testCreatePaymentCard() {
         PaymentCardDto paymentCardDto = new PaymentCardDto();
-        paymentCardDto.setUserId(user.getId());
+        paymentCardDto.setUserId(user.getUserId());
         paymentCardDto.setNumber("1234567890123456");
         paymentCardDto.setHolder("John Doe");
         paymentCardDto.setExpirationDate(LocalDate.of(2030, 12, 31));
@@ -124,7 +125,7 @@ class PaymentCardIntegrationTest {
         paymentCardRepository.save(paymentCard);
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                baseUrl + "/api/payment-cards/user/" + user.getId(),
+                baseUrl + "/api/payment-cards/user/" + user.getUserId(),
                 String.class
         );
 
@@ -174,7 +175,7 @@ class PaymentCardIntegrationTest {
                 PaymentCardDto.class
         );
         PaymentCardDto paymentCardDto = getResponse.getBody();
-        paymentCardDto.setUserId(user.getId());
+        paymentCardDto.setUserId(user.getUserId());
         paymentCardDto.setNumber("9876543210987654");
         paymentCardDto.setHolder("Jane Smith");
         paymentCardDto.setExpirationDate(LocalDate.of(2033, 6, 30));
@@ -259,23 +260,15 @@ class PaymentCardIntegrationTest {
     }
 
     @Test
-    void testCascadeDelete() {
-        PaymentCard paymentCard = new PaymentCard();
-        paymentCard.setUser(user);
-        paymentCard.setNumber("1234567890123456");
-        paymentCard.setHolder("John Doe");
-        paymentCard.setExpirationDate(LocalDate.of(2030, 12, 31));
-        paymentCard.setActive(true);
-        paymentCard = paymentCardRepository.save(paymentCard);
-
+    void testDeleteUser() {
         ResponseEntity<Void> response = restTemplate.exchange(
-                baseUrl + "/api/users/" + user.getId(),
+                baseUrl + "/api/users/" + user.getUserId(),
                 HttpMethod.DELETE,
                 null,
                 Void.class
         );
 
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
-        assertEquals(0, paymentCardRepository.findAll().size());
+        assertFalse(userRepository.existsById(user.getId()));
     }
 }

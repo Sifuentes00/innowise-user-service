@@ -35,10 +35,10 @@ public class PaymentCardService {
 
     @CacheEvict(value = "users", key = "#paymentCardDto.userId")
     public PaymentCardDto create(PaymentCardDto paymentCardDto) {
-        User user = userRepository.findById(paymentCardDto.getUserId())
-                .orElseThrow(() -> new NotFoundException("User not found with id: " + paymentCardDto.getUserId()));
+        User user = userRepository.findByUserId(paymentCardDto.getUserId())
+                .orElseThrow(() -> new NotFoundException("User not found with userId: " + paymentCardDto.getUserId()));
 
-        List<PaymentCard> existingCards = paymentCardRepository.findByUserId(user.getId());
+        List<PaymentCard> existingCards = paymentCardRepository.findByUserId(paymentCardDto.getUserId());
         if (existingCards.size() >= 5) {
             throw new BadRequestException("User cannot have more than 5 payment cards");
         }

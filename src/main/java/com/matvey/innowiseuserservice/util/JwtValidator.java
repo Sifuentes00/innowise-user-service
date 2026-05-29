@@ -20,7 +20,7 @@ public class JwtValidator {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtValidator.class);
 
-    @Value("${auth.service.url:http://localhost:8081}")
+    @Value("${auth.service.url}")
     private String authServiceUrl;
 
     private PublicKey publicKey;

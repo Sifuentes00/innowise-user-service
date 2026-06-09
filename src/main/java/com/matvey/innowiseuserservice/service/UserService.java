@@ -50,6 +50,7 @@ public class UserService {
     public UserDto getById(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
+        user.getPaymentCards().size();
         return userMapper.toDto(user);
     }
 
@@ -57,10 +58,10 @@ public class UserService {
     public UserDto getByUserId(UUID userId) {
         User user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new NotFoundException("User not found with userId: " + userId));
+        user.getPaymentCards().size();
         return userMapper.toDto(user);
     }
 
-    @Cacheable(value = "users")
     public Page<UserDto> getAll(String name, String surname, Pageable pageable) {
         Specification<User> spec = Specification.where((root, query, cb) -> cb.conjunction());
 
@@ -85,13 +86,19 @@ public class UserService {
     @Transactional
     @CacheEvict(value = "users", key = "#id")
     public void activate(UUID id) {
-        userRepository.updateActiveStatus(id, true);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
+        user.setActive(true);
+        userRepository.save(user);
     }
 
     @Transactional
     @CacheEvict(value = "users", key = "#id")
     public void deactivate(UUID id) {
-        userRepository.updateActiveStatus(id, false);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
+        user.setActive(false);
+        userRepository.save(user);
     }
 
     @Transactional

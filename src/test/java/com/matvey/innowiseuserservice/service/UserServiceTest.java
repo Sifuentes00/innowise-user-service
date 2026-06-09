@@ -157,16 +157,20 @@ class UserServiceTest {
 
     @Test
     void testActivate_Success() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         userService.activate(userId);
 
-        verify(userRepository, times(1)).updateActiveStatus(userId, true);
+        assertTrue(user.getActive());
+        verify(userRepository, times(1)).save(user);
     }
 
     @Test
     void testDeactivate_Success() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         userService.deactivate(userId);
 
-        verify(userRepository, times(1)).updateActiveStatus(userId, false);
+        assertFalse(user.getActive());
+        verify(userRepository, times(1)).save(user);
     }
 
     @Test

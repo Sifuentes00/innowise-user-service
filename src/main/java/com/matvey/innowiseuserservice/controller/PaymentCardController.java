@@ -42,12 +42,13 @@ public class PaymentCardController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<PaymentCardDto>> getAllPaymentCards(
-            @RequestParam(required = false) String holder,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String surname,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
-        Page<PaymentCardDto> cards = paymentCardService.getAll(holder, pageable);
+        Page<PaymentCardDto> cards = paymentCardService.getAll(name, surname, pageable);
         return ResponseEntity.ok(cards);
     }
 

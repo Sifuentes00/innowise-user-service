@@ -9,6 +9,7 @@ import org.mapstruct.MappingTarget;
 @Mapper(componentModel = "spring")
 public interface PaymentCardMapper {
 
+    @Mapping(source = "user.id", target = "userId")
     PaymentCardDto toDto(PaymentCard paymentCard);
 
     @Mapping(target = "user", ignore = true)

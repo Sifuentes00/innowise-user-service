@@ -21,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.client.RestTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -33,11 +34,14 @@ import java.time.LocalDate;
 import java.util.Date;
 import java.util.UUID;
 
+import javax.crypto.SecretKey;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @org.springframework.test.context.ActiveProfiles("test")
+@TestPropertySource(locations = "file:.env.test")
 class UserIntegrationTest {
 
     @Container
@@ -45,6 +49,13 @@ class UserIntegrationTest {
     static PostgreSQLContainer<?> postgresContainer = new PostgreSQLContainer<>(
             DockerImageName.parse("postgres:16-alpine"))
             .withReuse(true);
+
+    @DynamicPropertySource
+    static void postgresProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", postgresContainer::getJdbcUrl);
+        registry.add("spring.datasource.username", postgresContainer::getUsername);
+        registry.add("spring.datasource.password", postgresContainer::getPassword);
+    }
 
     @LocalServerPort
     private int port;
@@ -64,14 +75,15 @@ class UserIntegrationTest {
         userRepository.deleteAll();
     }
 
+    private static final SecretKey TEST_KEY = Keys.hmacShaKeyFor("test-secret-key-for-jwt-validation-in-tests".getBytes(StandardCharsets.UTF_8));
+
     private String generateTestToken(UUID userId, String role) {
-        Key key = Keys.secretKeyFor(io.jsonwebtoken.SignatureAlgorithm.HS256);
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim("role", role)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + 3600000))
-                .signWith(key)
+                .signWith(TEST_KEY)
                 .compact();
     }
 
@@ -90,9 +102,13 @@ class UserIntegrationTest {
         userDto.setEmail("john@example.com");
         userDto.setActive(true);
 
+        UUID userId = UUID.randomUUID();
+        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpEntity<UserDto> request = new HttpEntity<>(userDto, headers);
+
         ResponseEntity<UserDto> response = restTemplate.postForEntity(
                 baseUrl + "/api/users",
-                userDto,
+                request,
                 UserDto.class
         );
 
@@ -106,7 +122,9 @@ class UserIntegrationTest {
 
     @Test
     void testGetUserById() {
+        UUID userId = UUID.randomUUID();
         User user = new User();
+        user.setUserId(userId);
         user.setName("John");
         user.setSurname("Doe");
         user.setBirthDate(LocalDate.of(1990, 1, 1));
@@ -114,8 +132,13 @@ class UserIntegrationTest {
         user.setActive(true);
         user = userRepository.save(user);
 
-        ResponseEntity<UserDto> response = restTemplate.getForEntity(
-                baseUrl + "/api/users/" + user.getId(),
+        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        ResponseEntity<UserDto> response = restTemplate.exchange(
+                baseUrl + "/api/users/" + user.getUserId(),
+                HttpMethod.GET,
+                request,
                 UserDto.class
         );
 
@@ -143,8 +166,14 @@ class UserIntegrationTest {
         user2.setActive(true);
         userRepository.save(user2);
 
-        ResponseEntity<String> response = restTemplate.getForEntity(
+        UUID userId = UUID.randomUUID();
+        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        ResponseEntity<String> response = restTemplate.exchange(
                 baseUrl + "/api/users",
+                HttpMethod.GET,
+                request,
                 String.class
         );
 
@@ -154,7 +183,9 @@ class UserIntegrationTest {
 
     @Test
     void testUpdateUser() {
+        UUID userId = UUID.randomUUID();
         User user = new User();
+        user.setUserId(userId);
         user.setName("John");
         user.setSurname("Doe");
         user.setBirthDate(LocalDate.of(1990, 1, 1));
@@ -162,8 +193,12 @@ class UserIntegrationTest {
         user.setActive(true);
         user = userRepository.save(user);
 
-        ResponseEntity<UserDto> getResponse = restTemplate.getForEntity(
-                baseUrl + "/api/users/" + user.getId(),
+        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+
+        ResponseEntity<UserDto> getResponse = restTemplate.exchange(
+                baseUrl + "/api/users/" + user.getUserId(),
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
                 UserDto.class
         );
         UserDto userDto = getResponse.getBody();
@@ -172,9 +207,9 @@ class UserIntegrationTest {
         userDto.setBirthDate(LocalDate.of(1995, 5, 15));
         userDto.setEmail("jane@example.com");
 
-        HttpEntity<UserDto> requestEntity = new HttpEntity<>(userDto);
+        HttpEntity<UserDto> requestEntity = new HttpEntity<>(userDto, headers);
         ResponseEntity<UserDto> response = restTemplate.exchange(
-                baseUrl + "/api/users/" + user.getId(),
+                baseUrl + "/api/users/" + user.getUserId(),
                 HttpMethod.PUT,
                 requestEntity,
                 UserDto.class
@@ -188,7 +223,9 @@ class UserIntegrationTest {
 
     @Test
     void testDeleteUser() {
+        UUID userId = UUID.randomUUID();
         User user = new User();
+        user.setUserId(userId);
         user.setName("John");
         user.setSurname("Doe");
         user.setBirthDate(LocalDate.of(1990, 1, 1));
@@ -196,10 +233,12 @@ class UserIntegrationTest {
         user.setActive(true);
         user = userRepository.save(user);
 
+        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+
         ResponseEntity<Void> response = restTemplate.exchange(
-                baseUrl + "/api/users/" + user.getId(),
+                baseUrl + "/api/users/" + user.getUserId(),
                 HttpMethod.DELETE,
-                null,
+                new HttpEntity<>(headers),
                 Void.class
         );
 
@@ -209,7 +248,9 @@ class UserIntegrationTest {
 
     @Test
     void testActivateUser() {
+        UUID userId = UUID.randomUUID();
         User user = new User();
+        user.setUserId(userId);
         user.setName("John");
         user.setSurname("Doe");
         user.setBirthDate(LocalDate.of(1990, 1, 1));
@@ -217,10 +258,12 @@ class UserIntegrationTest {
         user.setActive(false);
         user = userRepository.save(user);
 
+        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+
         ResponseEntity<Void> response = restTemplate.exchange(
-                baseUrl + "/api/users/" + user.getId() + "/activate",
+                baseUrl + "/api/users/" + user.getUserId() + "/activate",
                 HttpMethod.PATCH,
-                null,
+                new HttpEntity<>(headers),
                 Void.class
         );
 
@@ -231,7 +274,9 @@ class UserIntegrationTest {
 
     @Test
     void testDeactivateUser() {
+        UUID userId = UUID.randomUUID();
         User user = new User();
+        user.setUserId(userId);
         user.setName("John");
         user.setSurname("Doe");
         user.setBirthDate(LocalDate.of(1990, 1, 1));
@@ -239,10 +284,12 @@ class UserIntegrationTest {
         user.setActive(true);
         user = userRepository.save(user);
 
+        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+
         ResponseEntity<Void> response = restTemplate.exchange(
-                baseUrl + "/api/users/" + user.getId() + "/deactivate",
+                baseUrl + "/api/users/" + user.getUserId() + "/deactivate",
                 HttpMethod.PATCH,
-                null,
+                new HttpEntity<>(headers),
                 Void.class
         );
 

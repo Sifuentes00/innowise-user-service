@@ -4,6 +4,7 @@ import com.matvey.innowiseuserservice.dto.UserDto;
 import com.matvey.innowiseuserservice.entity.User;
 import com.matvey.innowiseuserservice.exception.NotFoundException;
 import com.matvey.innowiseuserservice.mapper.UserMapper;
+import com.matvey.innowiseuserservice.mapper.PaymentCardMapper;
 import com.matvey.innowiseuserservice.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,9 @@ class UserServiceTest {
 
     @Mock
     private UserMapper userMapper;
+
+    @Mock
+    private PaymentCardMapper paymentCardMapper;
 
     @InjectMocks
     private UserService userService;
@@ -157,16 +161,20 @@ class UserServiceTest {
 
     @Test
     void testActivate_Success() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         userService.activate(userId);
 
-        verify(userRepository, times(1)).updateActiveStatus(userId, true);
+        assertTrue(user.getActive());
+        verify(userRepository, times(1)).save(user);
     }
 
     @Test
     void testDeactivate_Success() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         userService.deactivate(userId);
 
-        verify(userRepository, times(1)).updateActiveStatus(userId, false);
+        assertFalse(user.getActive());
+        verify(userRepository, times(1)).save(user);
     }
 
     @Test

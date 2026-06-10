@@ -35,6 +35,12 @@ public class PaymentCardService {
 
     @CacheEvict(value = "users", key = "#paymentCardDto.userId")
     public PaymentCardDto create(PaymentCardDto paymentCardDto) {
+        if (paymentCardDto == null) {
+            throw new IllegalArgumentException("PaymentCardDto cannot be null");
+        }
+        if (paymentCardDto.getUserId() == null) {
+            throw new IllegalArgumentException("UserId cannot be null");
+        }
         User user = userRepository.findByUserId(paymentCardDto.getUserId())
                 .orElseThrow(() -> new NotFoundException("User not found with userId: " + paymentCardDto.getUserId()));
 
@@ -55,11 +61,11 @@ public class PaymentCardService {
         return paymentCardMapper.toDto(paymentCard);
     }
 
-    public Page<PaymentCardDto> getAll(String holder, Pageable pageable) {
+    public Page<PaymentCardDto> getAll(String name, String surname, Pageable pageable) {
         Specification<PaymentCard> spec = Specification.where((root, query, cb) -> cb.conjunction());
 
-        if (holder != null) {
-            spec = spec.and(PaymentCardSpecification.byHolder(holder));
+        if (name != null || surname != null) {
+            spec = spec.and(PaymentCardSpecification.byUserNameAndSurname(name, surname));
         }
 
         Page<PaymentCard> cardPage = paymentCardRepository.findAll(spec, pageable);
@@ -82,13 +88,21 @@ public class PaymentCardService {
     }
 
     @Transactional
+    @CacheEvict(value = "users")
     public void activate(UUID id) {
-        paymentCardRepository.updateActiveStatus(id, true);
+        PaymentCard paymentCard = paymentCardRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Payment card not found with id: " + id));
+        paymentCard.setActive(true);
+        paymentCardRepository.save(paymentCard);
     }
 
     @Transactional
+    @CacheEvict(value = "users")
     public void deactivate(UUID id) {
-        paymentCardRepository.updateActiveStatus(id, false);
+        PaymentCard paymentCard = paymentCardRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Payment card not found with id: " + id));
+        paymentCard.setActive(false);
+        paymentCardRepository.save(paymentCard);
     }
 
     @Transactional

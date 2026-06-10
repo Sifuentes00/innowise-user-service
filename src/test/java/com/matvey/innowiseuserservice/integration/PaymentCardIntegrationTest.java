@@ -5,6 +5,8 @@ import com.matvey.innowiseuserservice.entity.PaymentCard;
 import com.matvey.innowiseuserservice.entity.User;
 import com.matvey.innowiseuserservice.repository.PaymentCardRepository;
 import com.matvey.innowiseuserservice.repository.UserRepository;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,19 +14,28 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.web.client.RestTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.time.LocalDate;
+import java.util.Date;
+import java.util.UUID;
+
+import javax.crypto.SecretKey;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -39,6 +50,13 @@ class PaymentCardIntegrationTest {
             DockerImageName.parse("postgres:16-alpine"))
             .withReuse(true);
 
+    @DynamicPropertySource
+    static void postgresProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", postgresContainer::getJdbcUrl);
+        registry.add("spring.datasource.username", postgresContainer::getUsername);
+        registry.add("spring.datasource.password", postgresContainer::getPassword);
+    }
+
     @LocalServerPort
     private int port;
 
@@ -51,6 +69,24 @@ class PaymentCardIntegrationTest {
     private RestTemplate restTemplate;
     private String baseUrl;
     private User user;
+
+    private static final SecretKey TEST_KEY = Keys.hmacShaKeyFor("test-secret-key-for-jwt-validation-in-tests".getBytes(StandardCharsets.UTF_8));
+
+    private String generateTestToken(UUID userId, String role) {
+        return Jwts.builder()
+                .subject(userId.toString())
+                .claim("role", role)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + 3600000))
+                .signWith(TEST_KEY)
+                .compact();
+    }
+
+    private HttpHeaders createAuthHeaders(UUID userId, String role) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + generateTestToken(userId, role));
+        return headers;
+    }
 
     @BeforeEach
     void setUp() {
@@ -80,9 +116,13 @@ class PaymentCardIntegrationTest {
         paymentCardDto.setExpirationDate(LocalDate.of(2030, 12, 31));
         paymentCardDto.setActive(true);
 
+        UUID userId = UUID.randomUUID();
+        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpEntity<PaymentCardDto> request = new HttpEntity<>(paymentCardDto, headers);
+
         ResponseEntity<PaymentCardDto> response = restTemplate.postForEntity(
                 baseUrl + "/api/payment-cards",
-                paymentCardDto,
+                request,
                 PaymentCardDto.class
         );
 
@@ -103,8 +143,14 @@ class PaymentCardIntegrationTest {
         paymentCard.setActive(true);
         paymentCard = paymentCardRepository.save(paymentCard);
 
-        ResponseEntity<PaymentCardDto> response = restTemplate.getForEntity(
+        UUID userId = UUID.randomUUID();
+        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        ResponseEntity<PaymentCardDto> response = restTemplate.exchange(
                 baseUrl + "/api/payment-cards/" + paymentCard.getId(),
+                HttpMethod.GET,
+                request,
                 PaymentCardDto.class
         );
 
@@ -124,8 +170,14 @@ class PaymentCardIntegrationTest {
         paymentCard.setActive(true);
         paymentCardRepository.save(paymentCard);
 
-        ResponseEntity<String> response = restTemplate.getForEntity(
+        UUID userId = UUID.randomUUID();
+        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        ResponseEntity<String> response = restTemplate.exchange(
                 baseUrl + "/api/payment-cards/user/" + user.getUserId(),
+                HttpMethod.GET,
+                request,
                 String.class
         );
 
@@ -151,8 +203,14 @@ class PaymentCardIntegrationTest {
         paymentCard2.setActive(true);
         paymentCardRepository.save(paymentCard2);
 
-        ResponseEntity<String> response = restTemplate.getForEntity(
+        UUID userId = UUID.randomUUID();
+        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        ResponseEntity<String> response = restTemplate.exchange(
                 baseUrl + "/api/payment-cards",
+                HttpMethod.GET,
+                request,
                 String.class
         );
 
@@ -170,8 +228,13 @@ class PaymentCardIntegrationTest {
         paymentCard.setActive(true);
         paymentCard = paymentCardRepository.save(paymentCard);
 
-        ResponseEntity<PaymentCardDto> getResponse = restTemplate.getForEntity(
+        UUID userId = UUID.randomUUID();
+        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+
+        ResponseEntity<PaymentCardDto> getResponse = restTemplate.exchange(
                 baseUrl + "/api/payment-cards/" + paymentCard.getId(),
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
                 PaymentCardDto.class
         );
         PaymentCardDto paymentCardDto = getResponse.getBody();
@@ -180,7 +243,7 @@ class PaymentCardIntegrationTest {
         paymentCardDto.setHolder("Jane Smith");
         paymentCardDto.setExpirationDate(LocalDate.of(2033, 6, 30));
 
-        HttpEntity<PaymentCardDto> requestEntity = new HttpEntity<>(paymentCardDto);
+        HttpEntity<PaymentCardDto> requestEntity = new HttpEntity<>(paymentCardDto, headers);
         ResponseEntity<PaymentCardDto> response = restTemplate.exchange(
                 baseUrl + "/api/payment-cards/" + paymentCard.getId(),
                 HttpMethod.PUT,
@@ -204,10 +267,13 @@ class PaymentCardIntegrationTest {
         paymentCard.setActive(true);
         paymentCard = paymentCardRepository.save(paymentCard);
 
+        UUID userId = UUID.randomUUID();
+        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+
         ResponseEntity<Void> response = restTemplate.exchange(
                 baseUrl + "/api/payment-cards/" + paymentCard.getId(),
                 HttpMethod.DELETE,
-                null,
+                new HttpEntity<>(headers),
                 Void.class
         );
 
@@ -225,10 +291,13 @@ class PaymentCardIntegrationTest {
         paymentCard.setActive(false);
         paymentCard = paymentCardRepository.save(paymentCard);
 
+        UUID userId = UUID.randomUUID();
+        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+
         ResponseEntity<Void> response = restTemplate.exchange(
                 baseUrl + "/api/payment-cards/" + paymentCard.getId() + "/activate",
                 HttpMethod.PATCH,
-                null,
+                new HttpEntity<>(headers),
                 Void.class
         );
 
@@ -247,10 +316,13 @@ class PaymentCardIntegrationTest {
         paymentCard.setActive(true);
         paymentCard = paymentCardRepository.save(paymentCard);
 
+        UUID userId = UUID.randomUUID();
+        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+
         ResponseEntity<Void> response = restTemplate.exchange(
                 baseUrl + "/api/payment-cards/" + paymentCard.getId() + "/deactivate",
                 HttpMethod.PATCH,
-                null,
+                new HttpEntity<>(headers),
                 Void.class
         );
 
@@ -261,10 +333,12 @@ class PaymentCardIntegrationTest {
 
     @Test
     void testDeleteUser() {
+        HttpHeaders headers = createAuthHeaders(user.getUserId(), "ADMIN");
+
         ResponseEntity<Void> response = restTemplate.exchange(
                 baseUrl + "/api/users/" + user.getUserId(),
                 HttpMethod.DELETE,
-                null,
+                new HttpEntity<>(headers),
                 Void.class
         );
 

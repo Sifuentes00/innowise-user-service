@@ -24,8 +24,4 @@ public interface PaymentCardRepository extends JpaRepository<PaymentCard, UUID>,
 
     @Query("SELECT pc FROM PaymentCard pc WHERE pc.user.id = :userId")
     Page<PaymentCard> findByUserId(@Param("userId") UUID userId, Pageable pageable);
-
-    @Modifying
-    @Query(value = "UPDATE payment_cards SET active = :active WHERE id = :id", nativeQuery = true)
-    void updateActiveStatus(@Param("id") UUID id, @Param("active") Boolean active);
 }

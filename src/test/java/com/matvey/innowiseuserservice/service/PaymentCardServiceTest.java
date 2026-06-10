@@ -147,7 +147,7 @@ class PaymentCardServiceTest {
         when(paymentCardRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(cardPage);
         when(paymentCardMapper.toDto(paymentCard)).thenReturn(paymentCardDto);
 
-        Page<PaymentCardDto> result = paymentCardService.getAll(null, pageable);
+        Page<PaymentCardDto> result = paymentCardService.getAll(null, null, pageable);
 
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
@@ -162,7 +162,7 @@ class PaymentCardServiceTest {
         when(paymentCardRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(cardPage);
         when(paymentCardMapper.toDto(paymentCard)).thenReturn(paymentCardDto);
 
-        Page<PaymentCardDto> result = paymentCardService.getAll("John Doe", pageable);
+        Page<PaymentCardDto> result = paymentCardService.getAll("John", "Doe", pageable);
 
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
@@ -213,16 +213,20 @@ class PaymentCardServiceTest {
 
     @Test
     void testActivate_Success() {
+        when(paymentCardRepository.findById(cardId)).thenReturn(Optional.of(paymentCard));
         paymentCardService.activate(cardId);
 
-        verify(paymentCardRepository, times(1)).updateActiveStatus(cardId, true);
+        assertTrue(paymentCard.getActive());
+        verify(paymentCardRepository, times(1)).save(paymentCard);
     }
 
     @Test
     void testDeactivate_Success() {
+        when(paymentCardRepository.findById(cardId)).thenReturn(Optional.of(paymentCard));
         paymentCardService.deactivate(cardId);
 
-        verify(paymentCardRepository, times(1)).updateActiveStatus(cardId, false);
+        assertFalse(paymentCard.getActive());
+        verify(paymentCardRepository, times(1)).save(paymentCard);
     }
 
     @Test

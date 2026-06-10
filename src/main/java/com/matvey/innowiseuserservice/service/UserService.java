@@ -28,13 +28,25 @@ public class UserService {
     @Autowired
     private UserMapper userMapper;
 
+    @Autowired
+    private com.matvey.innowiseuserservice.mapper.PaymentCardMapper paymentCardMapper;
+
     public UserDto create(UserDto userDto) {
+        if (userDto == null) {
+            throw new IllegalArgumentException("UserDto cannot be null");
+        }
         User user = userMapper.toEntity(userDto);
         User savedUser = userRepository.save(user);
         return userMapper.toDto(savedUser);
     }
 
     public UserDto createUser(UserCreateRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("UserCreateRequest cannot be null");
+        }
+        if (request.getUserId() == null) {
+            throw new IllegalArgumentException("UserId cannot be null");
+        }
         User user = new User();
         user.setUserId(request.getUserId());
         user.setName(request.getName());
@@ -50,17 +62,26 @@ public class UserService {
     public UserDto getById(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
-        return userMapper.toDto(user);
+        user.getPaymentCards().size();
+        UserDto userDto = userMapper.toDto(user);
+        userDto.setPaymentCards(user.getPaymentCards().stream()
+                .map(paymentCardMapper::toDto)
+                .collect(java.util.stream.Collectors.toList()));
+        return userDto;
     }
 
     @Cacheable(value = "users", key = "#userId")
     public UserDto getByUserId(UUID userId) {
         User user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new NotFoundException("User not found with userId: " + userId));
-        return userMapper.toDto(user);
+        user.getPaymentCards().size();
+        UserDto userDto = userMapper.toDto(user);
+        userDto.setPaymentCards(user.getPaymentCards().stream()
+                .map(paymentCardMapper::toDto)
+                .collect(java.util.stream.Collectors.toList()));
+        return userDto;
     }
 
-    @Cacheable(value = "users")
     public Page<UserDto> getAll(String name, String surname, Pageable pageable) {
         Specification<User> spec = Specification.where((root, query, cb) -> cb.conjunction());
 
@@ -75,6 +96,12 @@ public class UserService {
     @Transactional
     @CachePut(value = "users", key = "#id")
     public UserDto update(UUID id, UserDto userDto) {
+        if (id == null) {
+            throw new IllegalArgumentException("Id cannot be null");
+        }
+        if (userDto == null) {
+            throw new IllegalArgumentException("UserDto cannot be null");
+        }
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
         userMapper.updateEntityFromDto(userDto, existingUser);
@@ -85,13 +112,19 @@ public class UserService {
     @Transactional
     @CacheEvict(value = "users", key = "#id")
     public void activate(UUID id) {
-        userRepository.updateActiveStatus(id, true);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
+        user.setActive(true);
+        userRepository.save(user);
     }
 
     @Transactional
     @CacheEvict(value = "users", key = "#id")
     public void deactivate(UUID id) {
-        userRepository.updateActiveStatus(id, false);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
+        user.setActive(false);
+        userRepository.save(user);
     }
 
     @Transactional

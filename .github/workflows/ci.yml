@@ -41,10 +41,10 @@ jobs:
         run: mvn test
 
       - name: Perform code quality analysis
-        if: github.ref == 'refs/heads/dev'
+        if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/')
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn verify sonar:sonar -Dsonar.projectKey=Sifuentes00_innowise-user-service
+        run: mvn verify sonar:sonar -Dsonar.projectKey=Sifuentes00_innowise-user-service -Dsonar.organization=sifuentes00 -Dsonar.host.url=https://sonarcloud.io -Dsonar.token=${{ secrets.SONAR_TOKEN }}
 
       - name: Build application JAR
         run: mvn package -DskipTests

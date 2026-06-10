@@ -42,10 +42,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleException(Exception ex) {
-        logger.error("Unexpected error occurred", ex);
-        ErrorResponse errorResponse = new ErrorResponse("Internal server error", LocalDateTime.now(), null);
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
+        logger.error("Invalid argument", ex);
+        ErrorResponse errorResponse = new ErrorResponse("Invalid argument: " + ex.getMessage(), LocalDateTime.now(), null);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalStateException(IllegalStateException ex) {
+        logger.error("Illegal state", ex);
+        ErrorResponse errorResponse = new ErrorResponse("Illegal state: " + ex.getMessage(), LocalDateTime.now(), null);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataAccessException.class)
+    public ResponseEntity<ErrorResponse> handleDataAccessException(org.springframework.dao.DataAccessException ex) {
+        logger.error("Data access error", ex);
+        ErrorResponse errorResponse = new ErrorResponse("Data access error", LocalDateTime.now(), null);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
 

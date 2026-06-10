@@ -35,6 +35,12 @@ public class PaymentCardService {
 
     @CacheEvict(value = "users", key = "#paymentCardDto.userId")
     public PaymentCardDto create(PaymentCardDto paymentCardDto) {
+        if (paymentCardDto == null) {
+            throw new IllegalArgumentException("PaymentCardDto cannot be null");
+        }
+        if (paymentCardDto.getUserId() == null) {
+            throw new IllegalArgumentException("UserId cannot be null");
+        }
         User user = userRepository.findByUserId(paymentCardDto.getUserId())
                 .orElseThrow(() -> new NotFoundException("User not found with userId: " + paymentCardDto.getUserId()));
 

@@ -4,6 +4,7 @@ import com.matvey.innowiseuserservice.dto.UserDto;
 import com.matvey.innowiseuserservice.entity.User;
 import com.matvey.innowiseuserservice.exception.NotFoundException;
 import com.matvey.innowiseuserservice.mapper.UserMapper;
+import com.matvey.innowiseuserservice.mapper.PaymentCardMapper;
 import com.matvey.innowiseuserservice.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,9 @@ class UserServiceTest {
 
     @Mock
     private UserMapper userMapper;
+
+    @Mock
+    private PaymentCardMapper paymentCardMapper;
 
     @InjectMocks
     private UserService userService;

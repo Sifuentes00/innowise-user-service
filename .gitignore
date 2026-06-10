@@ -37,6 +37,7 @@ logs/
 .env
 .env.local
 .env.*.local
+.env.test
 
 ### Database ###
 *.db

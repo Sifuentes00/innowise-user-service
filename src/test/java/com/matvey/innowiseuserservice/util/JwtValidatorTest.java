@@ -57,6 +57,7 @@ class JwtValidatorTest {
         validToken = io.jsonwebtoken.Jwts.builder()
                 .subject(UUID.randomUUID().toString())
                 .claim("role", "USER")
+                .claim("token-type", "access")
                 .signWith(keyPair.getPrivate())
                 .compact();
     }
@@ -89,6 +90,7 @@ class JwtValidatorTest {
         String token = io.jsonwebtoken.Jwts.builder()
                 .subject(userId.toString())
                 .claim("role", "USER")
+                .claim("token-type", "access")
                 .signWith(keyPair.getPrivate())
                 .compact();
 
@@ -122,6 +124,7 @@ class JwtValidatorTest {
         String adminToken = io.jsonwebtoken.Jwts.builder()
                 .subject(UUID.randomUUID().toString())
                 .claim("role", "ADMIN")
+                .claim("token-type", "access")
                 .signWith(keyPair.getPrivate())
                 .compact();
 
@@ -165,5 +168,64 @@ class JwtValidatorTest {
                 .thenReturn(null);
 
         assertThrows(IllegalStateException.class, () -> jwtValidator.extractUserId(validToken));
+    }
+
+    @Test
+    void testExtractTokenType_AccessToken_ReturnsAccess() {
+        String tokenType = jwtValidator.extractTokenType(validToken);
+        assertEquals("access", tokenType);
+    }
+
+    @Test
+    void testExtractTokenType_RefreshToken_ReturnsRefresh() throws Exception {
+        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+        keyGen.initialize(2048);
+        KeyPair keyPair = keyGen.generateKeyPair();
+
+        String refreshToken = io.jsonwebtoken.Jwts.builder()
+                .subject(UUID.randomUUID().toString())
+                .claim("token-type", "refresh")
+                .signWith(keyPair.getPrivate())
+                .compact();
+
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(keyPair.getPublic().getEncoded());
+        String publicKeyPem = Base64.getEncoder().encodeToString(spec.getEncoded());
+
+        PublicKeyResponse publicKeyResponse = new PublicKeyResponse();
+        publicKeyResponse.setPublicKey("-----BEGIN PUBLIC KEY-----" + publicKeyPem + "-----END PUBLIC KEY-----");
+
+        when(restTemplate.getForObject(any(String.class), eq(PublicKeyResponse.class)))
+                .thenReturn(publicKeyResponse);
+
+        ReflectionTestUtils.invokeMethod(jwtValidator, "fetchPublicKey");
+
+        String tokenType = jwtValidator.extractTokenType(refreshToken);
+        assertEquals("refresh", tokenType);
+    }
+
+    @Test
+    void testValidateToken_RefreshToken_ThrowsInvalidTokenException() throws Exception {
+        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+        keyGen.initialize(2048);
+        KeyPair keyPair = keyGen.generateKeyPair();
+
+        String refreshToken = io.jsonwebtoken.Jwts.builder()
+                .subject(UUID.randomUUID().toString())
+                .claim("token-type", "refresh")
+                .signWith(keyPair.getPrivate())
+                .compact();
+
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(keyPair.getPublic().getEncoded());
+        String publicKeyPem = Base64.getEncoder().encodeToString(spec.getEncoded());
+
+        PublicKeyResponse publicKeyResponse = new PublicKeyResponse();
+        publicKeyResponse.setPublicKey("-----BEGIN PUBLIC KEY-----" + publicKeyPem + "-----END PUBLIC KEY-----");
+
+        when(restTemplate.getForObject(any(String.class), eq(PublicKeyResponse.class)))
+                .thenReturn(publicKeyResponse);
+
+        ReflectionTestUtils.invokeMethod(jwtValidator, "fetchPublicKey");
+
+        assertThrows(com.matvey.innowiseuserservice.exception.InvalidTokenException.class, () -> jwtValidator.validateToken(refreshToken));
     }
 }

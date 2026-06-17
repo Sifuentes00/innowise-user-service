@@ -1,6 +1,7 @@
 package com.matvey.innowiseuserservice.util;
 
 import com.matvey.innowiseuserservice.dto.PublicKeyResponse;
+import com.matvey.innowiseuserservice.exception.InvalidTokenException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import org.slf4j.Logger;
@@ -75,15 +76,28 @@ public class JwtValidator {
     public boolean validateToken(String token) {
         try {
             ensurePublicKeyLoaded();
+            String tokenType = extractTokenType(token);
+            if (!"access".equals(tokenType)) {
+                throw new InvalidTokenException("Only access tokens are allowed for resource access");
+            }
             Jwts.parser()
                     .verifyWith(publicKey)
                     .build()
                     .parseSignedClaims(token);
             return true;
+        } catch (InvalidTokenException e) {
+            logger.warn("Invalid token type: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
             logger.warn("Token validation failed: {}", e.getMessage());
             return false;
         }
+    }
+
+    public String extractTokenType(String token) {
+        ensurePublicKeyLoaded();
+        Claims claims = parseClaims(token);
+        return claims.get("token-type", String.class);
     }
 
     public java.util.UUID extractUserId(String token) {

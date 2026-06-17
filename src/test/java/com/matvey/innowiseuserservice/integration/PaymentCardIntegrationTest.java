@@ -76,6 +76,7 @@ class PaymentCardIntegrationTest {
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim("role", role)
+                .claim("token-type", "access")
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + 3600000))
                 .signWith(TEST_KEY)

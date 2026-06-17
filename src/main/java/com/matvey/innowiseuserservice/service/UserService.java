@@ -82,6 +82,13 @@ public class UserService {
         return userDto;
     }
 
+    @Cacheable(value = "users", key = "#email")
+    public UserDto getByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new NotFoundException("User not found with email: " + email));
+        return userMapper.toDto(user);
+    }
+
     public Page<UserDto> getAll(String name, String surname, Pageable pageable) {
         Specification<User> spec = Specification.where((root, query, cb) -> cb.conjunction());
 

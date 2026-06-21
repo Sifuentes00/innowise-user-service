@@ -183,4 +183,13 @@ class UserServiceTest {
 
         verify(userRepository, times(1)).deleteById(userId);
     }
+
+    @Test
+    void testDeleteByUserId_Success() {
+        UUID businessUserId = UUID.randomUUID();
+
+        userService.deleteByUserId(businessUserId);
+
+        verify(userRepository, times(1)).deleteByUserId(businessUserId);
+    }
 }

@@ -101,7 +101,7 @@ public class UserService {
     }
 
     @Transactional
-    @CachePut(value = "users", key = "#id")
+    @CacheEvict(value = "users", allEntries = true)
     public UserDto update(UUID id, UserDto userDto) {
         if (id == null) {
             throw new IllegalArgumentException("Id cannot be null");
@@ -117,7 +117,7 @@ public class UserService {
     }
 
     @Transactional
-    @CacheEvict(value = "users", key = "#id")
+    @CacheEvict(value = "users", allEntries = true)
     public void activate(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
@@ -126,7 +126,7 @@ public class UserService {
     }
 
     @Transactional
-    @CacheEvict(value = "users", key = "#id")
+    @CacheEvict(value = "users", allEntries = true)
     public void deactivate(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
@@ -138,5 +138,11 @@ public class UserService {
     @CacheEvict(value = "users", key = "#id")
     public void delete(UUID id) {
         userRepository.deleteById(id);
+    }
+
+    @Transactional
+    @CacheEvict(value = "users", allEntries = true)
+    public void deleteByUserId(UUID userId) {
+        userRepository.deleteByUserId(userId);
     }
 }

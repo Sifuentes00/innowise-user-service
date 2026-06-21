@@ -3,8 +3,6 @@ package com.matvey.innowiseuserservice.integration;
 import com.matvey.innowiseuserservice.dto.UserDto;
 import com.matvey.innowiseuserservice.entity.User;
 import com.matvey.innowiseuserservice.repository.UserRepository;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,13 +25,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-import java.nio.charset.StandardCharsets;
-import java.security.Key;
 import java.time.LocalDate;
-import java.util.Date;
 import java.util.UUID;
-
-import javax.crypto.SecretKey;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -73,22 +66,10 @@ class UserIntegrationTest {
         userRepository.deleteAll();
     }
 
-    private static final SecretKey TEST_KEY = Keys.hmacShaKeyFor("test-secret-key-for-jwt-validation-in-tests".getBytes(StandardCharsets.UTF_8));
-
-    private String generateTestToken(UUID userId, String role) {
-        return Jwts.builder()
-                .subject(userId.toString())
-                .claim("role", role)
-                .claim("token-type", "access")
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 3600000))
-                .signWith(TEST_KEY)
-                .compact();
-    }
-
-    private HttpHeaders createAuthHeaders(UUID userId, String role) {
+    private HttpHeaders createGatewayHeaders(UUID userId, String role) {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + generateTestToken(userId, role));
+        headers.set("X-User-Id", userId.toString());
+        headers.set("X-User-Role", role);
         return headers;
     }
 
@@ -102,7 +83,7 @@ class UserIntegrationTest {
         userDto.setActive(true);
 
         UUID userId = UUID.randomUUID();
-        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpHeaders headers = createGatewayHeaders(userId, "ADMIN");
         HttpEntity<UserDto> request = new HttpEntity<>(userDto, headers);
 
         ResponseEntity<UserDto> response = restTemplate.postForEntity(
@@ -131,7 +112,7 @@ class UserIntegrationTest {
         user.setActive(true);
         user = userRepository.save(user);
 
-        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpHeaders headers = createGatewayHeaders(userId, "ADMIN");
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
         ResponseEntity<UserDto> response = restTemplate.exchange(
@@ -166,7 +147,7 @@ class UserIntegrationTest {
         userRepository.save(user2);
 
         UUID userId = UUID.randomUUID();
-        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpHeaders headers = createGatewayHeaders(userId, "ADMIN");
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
         ResponseEntity<String> response = restTemplate.exchange(
@@ -192,7 +173,7 @@ class UserIntegrationTest {
         user.setActive(true);
         user = userRepository.save(user);
 
-        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpHeaders headers = createGatewayHeaders(userId, "ADMIN");
 
         ResponseEntity<UserDto> getResponse = restTemplate.exchange(
                 baseUrl + "/api/users/" + user.getUserId(),
@@ -232,7 +213,7 @@ class UserIntegrationTest {
         user.setActive(true);
         user = userRepository.save(user);
 
-        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpHeaders headers = createGatewayHeaders(userId, "ADMIN");
 
         ResponseEntity<Void> response = restTemplate.exchange(
                 baseUrl + "/api/users/" + user.getUserId(),
@@ -257,7 +238,7 @@ class UserIntegrationTest {
         user.setActive(false);
         user = userRepository.save(user);
 
-        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpHeaders headers = createGatewayHeaders(userId, "ADMIN");
 
         ResponseEntity<Void> response = restTemplate.exchange(
                 baseUrl + "/api/users/" + user.getUserId() + "/activate",
@@ -283,7 +264,7 @@ class UserIntegrationTest {
         user.setActive(true);
         user = userRepository.save(user);
 
-        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpHeaders headers = createGatewayHeaders(userId, "ADMIN");
 
         ResponseEntity<Void> response = restTemplate.exchange(
                 baseUrl + "/api/users/" + user.getUserId() + "/deactivate",

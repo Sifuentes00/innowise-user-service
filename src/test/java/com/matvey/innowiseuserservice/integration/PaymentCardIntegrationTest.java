@@ -5,8 +5,6 @@ import com.matvey.innowiseuserservice.entity.PaymentCard;
 import com.matvey.innowiseuserservice.entity.User;
 import com.matvey.innowiseuserservice.repository.PaymentCardRepository;
 import com.matvey.innowiseuserservice.repository.UserRepository;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,13 +27,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-import java.nio.charset.StandardCharsets;
-import java.security.Key;
 import java.time.LocalDate;
-import java.util.Date;
 import java.util.UUID;
-
-import javax.crypto.SecretKey;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -70,22 +63,10 @@ class PaymentCardIntegrationTest {
     private String baseUrl;
     private User user;
 
-    private static final SecretKey TEST_KEY = Keys.hmacShaKeyFor("test-secret-key-for-jwt-validation-in-tests".getBytes(StandardCharsets.UTF_8));
-
-    private String generateTestToken(UUID userId, String role) {
-        return Jwts.builder()
-                .subject(userId.toString())
-                .claim("role", role)
-                .claim("token-type", "access")
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 3600000))
-                .signWith(TEST_KEY)
-                .compact();
-    }
-
-    private HttpHeaders createAuthHeaders(UUID userId, String role) {
+    private HttpHeaders createGatewayHeaders(UUID userId, String role) {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + generateTestToken(userId, role));
+        headers.set("X-User-Id", userId.toString());
+        headers.set("X-User-Role", role);
         return headers;
     }
 
@@ -118,7 +99,7 @@ class PaymentCardIntegrationTest {
         paymentCardDto.setActive(true);
 
         UUID userId = UUID.randomUUID();
-        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpHeaders headers = createGatewayHeaders(userId, "ADMIN");
         HttpEntity<PaymentCardDto> request = new HttpEntity<>(paymentCardDto, headers);
 
         ResponseEntity<PaymentCardDto> response = restTemplate.postForEntity(
@@ -145,7 +126,7 @@ class PaymentCardIntegrationTest {
         paymentCard = paymentCardRepository.save(paymentCard);
 
         UUID userId = UUID.randomUUID();
-        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpHeaders headers = createGatewayHeaders(userId, "ADMIN");
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
         ResponseEntity<PaymentCardDto> response = restTemplate.exchange(
@@ -172,7 +153,7 @@ class PaymentCardIntegrationTest {
         paymentCardRepository.save(paymentCard);
 
         UUID userId = UUID.randomUUID();
-        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpHeaders headers = createGatewayHeaders(userId, "ADMIN");
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
         ResponseEntity<String> response = restTemplate.exchange(
@@ -205,7 +186,7 @@ class PaymentCardIntegrationTest {
         paymentCardRepository.save(paymentCard2);
 
         UUID userId = UUID.randomUUID();
-        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpHeaders headers = createGatewayHeaders(userId, "ADMIN");
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
         ResponseEntity<String> response = restTemplate.exchange(
@@ -230,7 +211,7 @@ class PaymentCardIntegrationTest {
         paymentCard = paymentCardRepository.save(paymentCard);
 
         UUID userId = UUID.randomUUID();
-        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpHeaders headers = createGatewayHeaders(userId, "ADMIN");
 
         ResponseEntity<PaymentCardDto> getResponse = restTemplate.exchange(
                 baseUrl + "/api/payment-cards/" + paymentCard.getId(),
@@ -269,7 +250,7 @@ class PaymentCardIntegrationTest {
         paymentCard = paymentCardRepository.save(paymentCard);
 
         UUID userId = UUID.randomUUID();
-        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpHeaders headers = createGatewayHeaders(userId, "ADMIN");
 
         ResponseEntity<Void> response = restTemplate.exchange(
                 baseUrl + "/api/payment-cards/" + paymentCard.getId(),
@@ -293,7 +274,7 @@ class PaymentCardIntegrationTest {
         paymentCard = paymentCardRepository.save(paymentCard);
 
         UUID userId = UUID.randomUUID();
-        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpHeaders headers = createGatewayHeaders(userId, "ADMIN");
 
         ResponseEntity<Void> response = restTemplate.exchange(
                 baseUrl + "/api/payment-cards/" + paymentCard.getId() + "/activate",
@@ -318,7 +299,7 @@ class PaymentCardIntegrationTest {
         paymentCard = paymentCardRepository.save(paymentCard);
 
         UUID userId = UUID.randomUUID();
-        HttpHeaders headers = createAuthHeaders(userId, "ADMIN");
+        HttpHeaders headers = createGatewayHeaders(userId, "ADMIN");
 
         ResponseEntity<Void> response = restTemplate.exchange(
                 baseUrl + "/api/payment-cards/" + paymentCard.getId() + "/deactivate",
@@ -334,7 +315,7 @@ class PaymentCardIntegrationTest {
 
     @Test
     void testDeleteUser() {
-        HttpHeaders headers = createAuthHeaders(user.getUserId(), "ADMIN");
+        HttpHeaders headers = createGatewayHeaders(user.getUserId(), "ADMIN");
 
         ResponseEntity<Void> response = restTemplate.exchange(
                 baseUrl + "/api/users/" + user.getUserId(),
